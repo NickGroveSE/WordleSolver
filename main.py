@@ -15,21 +15,23 @@ def main():
     possible = data["word"].array
     rows = locateRows()
     x = rows[0].left
-    current_y = rows[0].top
     guess = ""
     
     for i in range(0, len(rows)):
+
+        current_y = rows[i].top
+
         if i == 0:
-            guess = "LUCKY"
+            guess = "lucky"
 
         else:
-            searchForBestGuess(possible)
+            possible = searchForBestGuess(possible)
+            guess = possible[0]
 
         typeGuess(guess)
         informUser(i, guess)
-        time.sleep(4)
-        colorAnalysis(x, current_y, guess)
-        current_y = rows[i].top 
+        time.sleep(3)
+        colorAnalysis(x, current_y, guess) 
         
 
 
@@ -45,16 +47,26 @@ def colorAnalysis(x, cy, g):
     color_seek = 5
 
     for pos in range(0, len(g)):
+        # print(x)
+        # print(cy)
+        # print(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item()))
+
         if(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 141):
+            print("Green Found: " + g[pos].upper())
             green_letters[pos] = g[pos]
 
         elif(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 159):
             if g[pos] not in yellow_letters[pos]:
+                print("Yellow Found: " + g[pos].upper())
                 yellow_letters[pos].append(g[pos])
 
         else:
             if g[pos] not in gray_letters:
-                gray_letters.append(g[pos])
+                print("Gray Found: " + g[pos].upper())
+                if g[pos] in g[:pos] and g[pos] not in gray_letters:
+                    yellow_letters[pos].append(g[pos])
+                else:
+                    gray_letters.append(g[pos])
                  
 
         x = x + indent
@@ -68,19 +80,43 @@ def searchForBestGuess(poss):
     # print(poss[[letter in word for letter in gray_letters for word in poss]])
     # poss = poss[[]]
     # print(poss)
+    changes = []
 
-    print([[letter in word for word in data["word"].array] for letter in gray_letters])
+    for word in poss:
+        for letter in gray_letters:
+            if word in changes:
+                continue
+            elif letter in word:
+                changes.append(word)
+
+    poss = poss[~np.in1d(poss,changes)]
+    # print(poss) 
     
 
     for pos in range(0, 5):
-        poss = poss[~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]])]
-        print(gray_letters)
+        # poss = poss[~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]])]
+        # print(gray_letters)
         
         
-        print(~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]]))
+        # print(~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]]))
+
+        changes = []
+
+        for word in poss:
+            if word in changes:
+                continue
+            for letter in yellow_letters[pos]:
+                if letter == word[pos] or letter not in word:
+                    changes.append(word)
+
+        poss = poss[~np.in1d(poss,changes)]
+        # print(poss) 
 
         if(green_letters[pos] != ''):
-                poss = poss[np.in1d(poss, data["word"].array[[word[pos].lower() is green_letters[pos].lower() for word in data["word"]]])]    
+                poss = poss[np.in1d(poss, data["word"].array[[word[pos] == green_letters[pos] for word in data["word"]]])]
+                # print(poss)    
+
+    return poss
 
 
 def typeGuess(g):
