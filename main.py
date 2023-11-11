@@ -1,13 +1,13 @@
 import pandas
 import pyautogui
 import time
-import string
 import numpy as np
 
 def gatherData():
     print("Gathering Word Data...")
     reader = pandas.read_csv('./data/wordle.csv')
     return reader.sort_values(by='occurrence', ascending=False)
+
 
 def main():
     print("Solving...")
@@ -22,7 +22,7 @@ def main():
         current_y = rows[i].top
 
         if i == 0:
-            guess = "lucky"
+            guess = "stare"
 
         else:
             possible = searchForBestGuess(possible)
@@ -31,13 +31,13 @@ def main():
         typeGuess(guess)
         informUser(i, guess)
         time.sleep(3)
-        colorAnalysis(x, current_y, guess) 
+        colorAnalysis(x, current_y, guess)
+        if '' not in green_letters:
+            print("Correct Guess! " + guess.upper())
+            return 
         
 
-
 def locateRows():
-    print("Locating Row...")
-
     return list(pyautogui.locateAllOnScreen('./content/wordle_empty_row.png'))
 
 
@@ -47,39 +47,33 @@ def colorAnalysis(x, cy, g):
     color_seek = 5
 
     for pos in range(0, len(g)):
-        # print(x)
-        # print(cy)
-        # print(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item()))
 
         if(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 141):
-            print("Green Found: " + g[pos].upper())
+            if g[pos] in gray_letters:
+                gray_letters.remove(g[pos])
             green_letters[pos] = g[pos]
 
         elif(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 159):
             if g[pos] not in yellow_letters[pos]:
-                print("Yellow Found: " + g[pos].upper())
                 yellow_letters[pos].append(g[pos])
 
         else:
-            if g[pos] not in gray_letters:
-                print("Gray Found: " + g[pos].upper())
-                if g[pos] in g[:pos] and g[pos] not in gray_letters:
-                    yellow_letters[pos].append(g[pos])
-                else:
-                    gray_letters.append(g[pos])
-                 
+            if g[pos] not in gray_letters and g[pos] not in g[:pos]:
+                gray_letters.append(g[pos])
 
+        if '' not in green_letters:
+            return
         x = x + indent
 
+
     print(green_letters)  
-    print(yellow_letters) 
+    print(yellow_letters)
+    print(gray_letters) 
 
 
 def searchForBestGuess(poss):
+    print("Searching For Best Guess...")
 
-    # print(poss[[letter in word for letter in gray_letters for word in poss]])
-    # poss = poss[[]]
-    # print(poss)
     changes = []
 
     for word in poss:
@@ -90,15 +84,8 @@ def searchForBestGuess(poss):
                 changes.append(word)
 
     poss = poss[~np.in1d(poss,changes)]
-    # print(poss) 
     
-
     for pos in range(0, 5):
-        # poss = poss[~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]])]
-        # print(gray_letters)
-        
-        
-        # print(~np.in1d(poss, data["word"].array[[word[pos].lower() not in gray_letters for word in data["word"]]]))
 
         changes = []
 
@@ -110,11 +97,9 @@ def searchForBestGuess(poss):
                     changes.append(word)
 
         poss = poss[~np.in1d(poss,changes)]
-        # print(poss) 
 
         if(green_letters[pos] != ''):
-                poss = poss[np.in1d(poss, data["word"].array[[word[pos] == green_letters[pos] for word in data["word"]]])]
-                # print(poss)    
+                poss = poss[np.in1d(poss, data["word"].array[[word[pos] == green_letters[pos] for word in data["word"]]])] 
 
     return poss
 
@@ -127,7 +112,7 @@ def typeGuess(g):
 
 
 def informUser(gn, g):
-    print("Guess " + str(gn + 1) + ": " + g)
+    print("Guess " + str(gn + 1) + ": " + g.upper())
 
 
 print("Navigate to the Window Where Wordle is")
