@@ -38,6 +38,8 @@ def main():
         time.sleep(3)
         colorAnalysis(xCoordinate, currentYCoordinate, guess)
 
+        # New Error Found
+
         if '' not in GREEN_LETTERS:
             print("Correct Guess! " + guess.upper())
             return 
@@ -45,6 +47,7 @@ def main():
 
 def locateEmptyRows():
     return list(pyautogui.locateAllOnScreen('./content/wordle_empty_row.png'))
+
 
 # Identify Gray, Yellow, and Green Letters Returned from Guess
 def colorAnalysis(xCoordinate, currentYCoordinate, guess):
