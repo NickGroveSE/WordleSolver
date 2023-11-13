@@ -3,8 +3,8 @@ import pyautogui
 import time
 import numpy as np
 
-# Reads CSV of Wordle Words
-def gatherData():
+
+def readCSV():
     print("Gathering Word Data...")
     reader = pandas.read_csv('./data/wordle.csv')
     return reader.sort_values(by='occurrence', ascending=False)
@@ -13,148 +13,139 @@ def gatherData():
 def main():
     print("Solving...")
 
-    # Initialize Possibilities to All Words
-    possible = data["word"].array
-
-    # Call Function to Identify The Empty Rows on Screen
-    rows = locateRows()
-    x = rows[0].left
+    possibleWords = ALL_WORDS["word"].array
+    rowsOfPuzzle = locateEmptyRows()
+    xCoordinate = rowsOfPuzzle[0].left
     guess = ""
     
-    for i in range(0, len(rows)):
+    for row in range(0, len(rowsOfPuzzle)):
 
-        current_y = rows[i].top
+        currentYCoordinate = rowsOfPuzzle[row].top
 
         # First Guess is STARE to knockout a lot of common letters
-        if i == 0:
+        if row == 0:
             guess = "stare"
 
         # Guesses 2-6
         else:
-            possible = searchForBestGuess(possible)
+            possibleWords = searchForBestGuess(possibleWords)
 
             # Set Guess to the Top of the Possibilities Array since this Array is sorted by each words Occurrence Probability
-            guess = possible[0]
+            guess = possibleWords[0]
 
-        # Guess Word
         typeGuess(guess)
-        informUser(i, guess)
+        informUser(row, guess)
         time.sleep(3)
+        colorAnalysis(xCoordinate, currentYCoordinate, guess)
 
-        # Identify Gray, Yellow, and Green Letters Returned from Guess
-        colorAnalysis(x, current_y, guess)
-
-        if '' not in green_letters:
+        if '' not in GREEN_LETTERS:
             print("Correct Guess! " + guess.upper())
             return 
         
 
-def locateRows():
+def locateEmptyRows():
     return list(pyautogui.locateAllOnScreen('./content/wordle_empty_row.png'))
 
-
-def colorAnalysis(x, cy, g):
+# Identify Gray, Yellow, and Green Letters Returned from Guess
+def colorAnalysis(xCoordinate, currentYCoordinate, guess):
     print("Analyzing Guess Results...")
 
     # Value Used to Make Sure Our Coordinates are just a little bit in the letter box to identify colors
-    color_seek = 5
+    colorSeek = 5
 
-    # Loop Through Guess Results
-    for pos in range(0, len(g)):
+    for position in range(0, len(guess)):
 
         # Check for Greens
-        if(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 141):
+        if(pyautogui.pixel(np.int64(xCoordinate+colorSeek).item(), np.int64(currentYCoordinate+colorSeek).item())[1] == 141):
 
             # Double Letter Gray/Green Check
-            if g[pos] in gray_letters:
-                gray_letters.remove(g[pos])
+            if guess[position] in GRAY_LETTERS:
+                GRAY_LETTERS.remove(guess[position])
 
-            green_letters[pos] = g[pos]
+            GREEN_LETTERS[position] = guess[position]
 
         # Check for Yellows
-        elif(pyautogui.pixel(np.int64(x+color_seek).item(), np.int64(cy+color_seek).item())[1] == 159):
+        elif(pyautogui.pixel(np.int64(xCoordinate+colorSeek).item(), np.int64(currentYCoordinate+colorSeek).item())[1] == 159):
 
             # No Duplicates Wanted in each Yellow Letters Dict Key
-            if g[pos] not in yellow_letters[pos]:
-                yellow_letters[pos].append(g[pos])
+            if guess[position] not in YELLOW_LETTERS[position]:
+                YELLOW_LETTERS[position].append(guess[position])
 
         # Check for Gray Letters
         else:
 
             # Check for no Duplicates and Double Letter Yellow/Gray Check
-            if g[pos] not in gray_letters and g[pos] not in g[:pos]:
-                gray_letters.append(g[pos])
+            if guess[position] not in GRAY_LETTERS and guess[position] not in guess[:position]:
+                GRAY_LETTERS.append(guess[position])
 
         # Correct Guess Return
-        if '' not in green_letters:
+        if '' not in GREEN_LETTERS:
             return
         
         # Move X Position to the Right
-        x = x + indent
+        xCoordinate = xCoordinate + SQUARE_SIZE
 
 
-    print(green_letters)  
-    print(yellow_letters)
-    print(gray_letters) 
+    print(GREEN_LETTERS)  
+    print(YELLOW_LETTERS)
+    print(GRAY_LETTERS) 
 
 
-def searchForBestGuess(poss):
+def searchForBestGuess(possibleWords):
     print("Searching For Best Guess...")
 
-    # Track Words that must be taken out of our Possibilities
-    changes = []
+    changesToPossible = []
 
     # Change Possibilities Based On Gray Letters
-    for word in poss:
-        for letter in gray_letters:
-            if word in changes:
+    for word in possibleWords:
+        for letter in GRAY_LETTERS:
+            if word in changesToPossible:
                 continue
             elif letter in word:
-                changes.append(word)
-    poss = poss[~np.in1d(poss,changes)]
+                changesToPossible.append(word)
+    possibleWords = possibleWords[~np.in1d(possibleWords,changesToPossible)]
     
-    # Loop Through Letter Positions
-    for pos in range(0, 5):
+    for position in range(0, 5):
 
-        changes = []
+        changesToPossible = []
 
         # Change Possibilities Based on Yellow Letters
-        for word in poss:
-            if word in changes:
+        for word in possibleWords:
+            if word in changesToPossible:
                 continue
-            for letter in yellow_letters[pos]:
-                if letter == word[pos] or letter not in word:
-                    changes.append(word)
-        poss = poss[~np.in1d(poss,changes)]
+            for letter in YELLOW_LETTERS[position]:
+                if letter == word[position] or letter not in word:
+                    changesToPossible.append(word)
+        possibleWords = possibleWords[~np.in1d(possibleWords,changesToPossible)]
 
         # Change Possibilities Based on Green Letters
-        if(green_letters[pos] != ''):
-                poss = poss[np.in1d(poss, data["word"].array[[word[pos] == green_letters[pos] for word in data["word"]]])] 
+        if(GREEN_LETTERS[position] != ''):
+                possibleWords = possibleWords[np.in1d(possibleWords, ALL_WORDS["word"].array[[word[position] == GREEN_LETTERS[position] for word in ALL_WORDS["word"]]])] 
 
-    return poss
+    return possibleWords
 
 
-def typeGuess(g):
-    for l in g:
-        pyautogui.press(l)
+def typeGuess(guess):
+    for letter in guess:
+        pyautogui.press(letter)
 
     pyautogui.press('enter')
 
 
-def informUser(gn, g):
-    print("Guess " + str(gn + 1) + ": " + g.upper())
+def informUser(currentRow, guess):
+    print("Guess " + str(currentRow + 1) + ": " + guess.upper())
 
 
 print("Navigate to the Window Where Wordle is")
 
 # Initialize Letter Containers and Pixel Size of the Letter Squares
-yellow_letters = {k: [] for k in [0,1,2,3,4]}
-green_letters = ['']*5
-gray_letters = []
-indent = 67
+YELLOW_LETTERS = {k: [] for k in [0,1,2,3,4]}
+GREEN_LETTERS = ['']*5
+GRAY_LETTERS = []
+SQUARE_SIZE = 67
 
 # Delay Program So The User can Navigate to Wordle
 time.sleep(5)
 
-data = gatherData()
+ALL_WORDS = readCSV()
 main()
